@@ -1,0 +1,92 @@
+{
+  "version": "1.2.0",
+  "description": "Simpl Autocode Pipeline - Version Lock File",
+  "last_validated": "2026-01-15T10:00:00Z",
+  "validated_by": "V14 training compatibility update",
+  
+  "files": {
+    "src/preprocessor.py": {
+      "sha256": "f48c7e1f08e0a8c1f39fd04a6a0c7bf9091e7de32195798680f561a0485c082f",
+      "description": "Preprocessor with CPT disambiguation + view count fallback to report body"
+    },
+    "src/pipeline.py": {
+      "sha256": "a51b0f746cba8a304c0a47e93867df2740ab47b3aebf3140b86ebb81d32db8dc",
+      "description": "Pipeline with exam_desc extraction and pass-through to LLM predictor"
+    },
+    "src/postprocessor.py": {
+      "sha256": "f8a2172ea5e176d95f471a94eab5d1ba6b55f5dee1b53b026817b40d8525eced",
+      "description": "Postprocessor with ICD filtering rules"
+    },
+    "src/llm_predictor.py": {
+      "sha256": "9b64becf027c983b1fdceb83df201fd786c8fd4a625450094e637937129b59d5",
+      "description": "LLM predictor with CPT disambiguation integration"
+    },
+    "src/rag_retriever.py": {
+      "sha256": "749aef2d0d26cc04e9797da97057e7a6c54fec38ffb8b02f4dc547fdad2936c5",
+      "description": "RAG retriever with 71k index"
+    },
+    "config/PROMPT_TEMPLATE.txt": {
+      "sha256": "5542d77e03c568668d8cc54e03670fe6ffbae55631e11e6f6b786e9becd09f5a",
+      "description": "Locked prompt template from v13 training"
+    },
+    "config/rag_config.yaml": {
+      "sha256": "cb8ee756bf41083857789412406cfbc83ae3acdc1188062ec0547976d35be210",
+      "description": "RAG configuration settings"
+    }
+  },
+  
+  "indices": {
+    "prefix": "nyxmed_71k",
+    "files": [
+      "indices/nyxmed_71k_bm25.pkl",
+      "indices/nyxmed_71k_faiss.index",
+      "indices/nyxmed_71k_metadata.pkl"
+    ],
+    "record_count": 71000
+  },
+  
+  "models": {
+    "llm": "Llama 3.3 70B (fine-tuned)",
+    "llm_backend": "HuggingFace Inference Endpoints",
+    "reranker": "BAAI/bge-reranker-v2-m3",
+    "embedding": "Snowflake/snowflake-arctic-embed-m"
+  },
+  
+  "production_runs": [
+    {
+      "date": "2026-01-12",
+      "records": 3108,
+      "batches": 32,
+      "status": "completed"
+    }
+  ],
+  
+  "changes": [
+    {
+      "version": "1.2.0",
+      "date": "2026-01-15",
+      "changes": [
+        "V14 Compatibility: Updated system prompt to include instruction-following line",
+        "Updated config.py SYSTEM_PROMPT for V14 model compatibility",
+        "Updated llm_predictor.py HF_SYSTEM_PROMPT for V14 model compatibility",
+        "Updated PRODUCTION_PROMPT_BASELINE.md documentation"
+      ]
+    },
+    {
+      "version": "1.1.0",
+      "date": "2026-01-14",
+      "changes": [
+        "Fix: View count fallback to search report body when not in exam title",
+        "Fix: Extract and pass exam_desc from pipeline to LLM predictor for disambiguation",
+        "Added: OB Ultrasound codes (76801, 76805, 76815, 76817)",
+        "Added: Arterial duplex codes (93930, 93931, 93976)",
+        "Added: Hip bilateral X-ray codes (73501, 73503, 73521-73523)",
+        "Enhanced: CTA detection keywords",
+        "Enhanced: Tomosynthesis detection",
+        "Enhanced: Venous vs arterial duplex distinction"
+      ]
+    }
+  ],
+  
+  "validation_command": "python -c \"import json; import hashlib; lock=json.load(open('pipeline.lock')); [print(f'{f}: {\"✓\" if hashlib.sha256(open(f,\"rb\").read()).hexdigest()==h[\"sha256\"] else \"✗ MODIFIED\"}') for f,h in lock['files'].items()]\""
+}

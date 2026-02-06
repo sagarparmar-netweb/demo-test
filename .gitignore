@@ -1,0 +1,89 @@
+# ==============================================================================
+# SIMPL AUTOCODE - GITIGNORE
+# ==============================================================================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Credentials & Secrets
+credentials_and_data/
+*.env
+.env*
+*credentials*
+*secret*
+
+# Large Data Files
+*.pkl
+*.index
+*.faiss
+*.parquet
+*.xlsx
+*.xls
+
+# CSV files (except specific ones we want to track)
+*.csv
+!production/batches/manifest.json
+
+# Large model files
+*.bin
+*.pt
+*.pth
+*.onnx
+*.safetensors
+
+# Training data (too large)
+*train*.jsonl
+*val*.jsonl
+*test*.jsonl
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# ==============================================================================
+# DIRECTORIES TO EXCLUDE
+# ==============================================================================
+
+# Virtual environment
+.venv/
+
+# Data directory (large files)
+data/
+
+# Verification results (regenerated)
+VFinal4/verification/
+
+# ==============================================================================
+# FILES TO INCLUDE (override above rules)
+# ==============================================================================
+# None - we want to keep the repo clean
+
+src/PRODUCTION_PROMPT_BASELINE.md

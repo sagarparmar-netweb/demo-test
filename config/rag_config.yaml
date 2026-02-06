@@ -1,0 +1,103 @@
+# ==============================================================================
+# RAG RETRIEVER CONFIGURATION - LOCKED
+# ==============================================================================
+# This configuration defines the RAG retrieval settings for the Simpl Autocode
+# pipeline. DO NOT MODIFY without updating the hash below.
+#
+# Last verified: 2026-01-12
+# Index records: 71,000+ radiology reports
+# ==============================================================================
+
+# Configuration version (increment when making changes)
+version: "1.0.0"
+
+# ==============================================================================
+# INDEX FILES
+# ==============================================================================
+index:
+  # Directory containing index files (relative to VFinal4/)
+  directory: "indices"
+  
+  # Index file prefix (files: {prefix}_bm25.pkl, {prefix}_faiss.index, {prefix}_metadata.pkl)
+  prefix: "nyxmed_71k"
+  
+  # Full paths (auto-constructed from above)
+  files:
+    bm25: "indices/nyxmed_71k_bm25.pkl"
+    faiss: "indices/nyxmed_71k_faiss.index"
+    metadata: "indices/nyxmed_71k_metadata.pkl"
+
+# ==============================================================================
+# DATA SOURCE
+# ==============================================================================
+data:
+  # Source CSV for building index (if rebuilding needed)
+  source_csv: "data/consolidated_cleaned.csv"
+  
+  # Required columns in source data
+  required_columns:
+    - "Parsed_Compact"      # For BM25 retrieval
+    - "indication"          # For few-shot examples
+    - "impression"          # For few-shot examples
+    - "laterality"          # For laterality info
+    - "CPT Code"            # Ground truth CPT
+    - "icd_codes"           # Ground truth ICD codes
+
+# ==============================================================================
+# RETRIEVAL SETTINGS
+# ==============================================================================
+retrieval:
+  # Number of candidates from BM25 search
+  bm25_top_k: 15
+  
+  # Number of candidates after reranking (final results)
+  rerank_top_k: 5
+  
+  # Number of few-shot examples to include in prompt
+  num_examples: 3
+  
+  # Query format: Use compact format for retrieval
+  # Format: "INDICATION: {indication} | IMPRESSION: {impression} | LATERALITY: {laterality}"
+  query_format: "compact"
+
+# ==============================================================================
+# MODELS
+# ==============================================================================
+models:
+  # Embedding model for FAISS vector search
+  embedding_model: "Snowflake/snowflake-arctic-embed-m"
+  
+  # Cross-encoder reranker model
+  reranker_model: "BAAI/bge-reranker-v2-m3"
+  
+  # Whether to use reranker (slower but more accurate)
+  use_reranker: true
+
+# ==============================================================================
+# OUTPUT CONFIGURATION
+# ==============================================================================
+output:
+  # Maximum CPT candidates to return
+  max_cpt_candidates: 10
+  
+  # Maximum ICD candidates to return
+  max_icd_candidates: 30
+  
+  # Truncate findings in examples to this many characters
+  findings_max_chars: 200
+  
+  # Score normalization for RAG match score (reranker outputs 0-1)
+  score_multiplier: 100
+
+# ==============================================================================
+# VALIDATION HASH
+# ==============================================================================
+# SHA256 hash of critical settings (update if config changes)
+# To regenerate: sha256(f"{prefix}|{bm25_top_k}|{rerank_top_k}|{reranker_model}")
+validation:
+  config_hash: "nyxmed_71k|15|5|BAAI/bge-reranker-v2-m3"
+  last_validated: "2026-01-12"
+
+# ==============================================================================
+# DO NOT MODIFY ABOVE THIS LINE WITHOUT UPDATING THE HASH
+# ==============================================================================

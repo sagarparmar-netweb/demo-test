@@ -1,0 +1,85 @@
+################################################################################
+# LOCKED PROMPT TEMPLATE - DO NOT MODIFY
+# =====================================
+# This is the EXACT format used during model fine-tuning (v14_train_messages.jsonl)
+# Any deviation from this format will degrade model performance.
+#
+# Last verified: 2026-01-15
+# Training samples: ~67,000 (V14 deduped dataset)
+# Model: Llama 3.3 70B fine-tuned
+#
+# V14 Update: Added instruction-following line to system message
+################################################################################
+
+### SYSTEM MESSAGE ###
+You are an expert radiology coder specializing in ICD-10 and CPT coding for radiology reports.
+
+Follow the coding rules provided in each request carefully.
+
+### USER MESSAGE TEMPLATE ###
+Study these similar cases:
+
+{RAG_EXAMPLES}
+
+---
+
+Code this report:
+{REPORT_TEXT}
+
+SIMILAR CASES CPT CODES (most likely):
+{CPT_CANDIDATES}
+
+Available ICD codes (from similar cases):
+{ICD_CANDIDATES}
+
+Rules:
+- Determine the CPT code from the procedure/exam description
+- Add appropriate modifiers (26=professional, LT=left, RT=right, 50=bilateral)
+- Code the clinical indication (R/Z/S code)
+- Code confirmed findings from impression
+- Use laterality info to select correct modifier (LT/RT/50)
+
+Output format: CPT, MODIFIER, ICD1, ICD2, ...
+Example: 71046, 26, R91.8, J18.9
+Example: 73030, 26 LT, M25.511, S43.401A
+
+### EXPECTED OUTPUT FORMAT ###
+{CPT}, {MODIFIER}, {ICD1}, {ICD2}, ...
+
+################################################################################
+# PLACEHOLDER DEFINITIONS
+# =======================
+# {RAG_EXAMPLES}    - 3-5 similar cases, each formatted as:
+#                     Report: INDICATION: ... LATERALITY: ... IMPRESSION: ... FINDINGS: ...
+#                     Output: CPT, ICD1, ICD2, ...
+#                     ---
+#
+# {REPORT_TEXT}     - Full report text (MRN, Order No, Exam Description, 
+#                     Reason for Exam, Findings, Impression, etc.)
+#
+# {CPT_CANDIDATES}  - Newline-separated list of CPT codes from similar cases
+#                     (typically 5-10 codes)
+#
+# {ICD_CANDIDATES}  - Newline-separated list of ICD codes from similar cases
+#                     (typically 20-30 codes)
+################################################################################
+
+### RAG EXAMPLE FORMAT (for {RAG_EXAMPLES}) ###
+Report: INDICATION: {indication}
+LATERALITY: {laterality}
+IMPRESSION: {impression}
+FINDINGS: {findings_truncated}
+Output: {cpt}, {icd_codes}
+---
+
+################################################################################
+# VALIDATION RULES
+# ================
+# 1. System message must be EXACTLY as shown above
+# 2. User message must start with "Study these similar cases:"
+# 3. Must include "Code this report:" before the report
+# 4. Must include "SIMILAR CASES CPT CODES (most likely):" section
+# 5. Must include "Available ICD codes (from similar cases):" section
+# 6. Rules section must be EXACTLY as shown above
+# 7. Output format examples must be included
+################################################################################
