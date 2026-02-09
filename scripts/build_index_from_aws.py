@@ -175,8 +175,21 @@ def build_index(
     # Build FAISS index
     print("\nBuilding FAISS index (this may take a few minutes)...")
     print(f"  Loading embedding model: {EMBED_MODEL}")
-    embed_model = SentenceTransformer(EMBED_MODEL)
-    
+    print("  Loading embedding model...")
+
+    try:
+        embed_model = SentenceTransformer(
+            EMBED_MODEL,
+            local_files_only=True
+        )
+    except Exception as e:
+        print("\n❌ Failed to load embedding model.")
+        print("Reason:", e)
+        print("\nFix:")
+        print("  1. Pre-download the model on a machine with internet")
+        print("  2. Or set HF_HUB_OFFLINE=0 and ensure internet access")
+        return False
+
     print(f"  Encoding {len(documents)} documents...")
     embeddings = embed_model.encode(
         documents, 

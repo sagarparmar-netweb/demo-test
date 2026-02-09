@@ -32,7 +32,9 @@ def main():
     print("=" * 80)
     
     # Load data
-    data_path = PROJECT_DIR / 'data' / 'consolidated_cleaned.csv'
+    data_path = VFINAL3_DIR / 'data' / 'consolidated_cleaned_v1.csv'
+    print(VFINAL3_DIR)
+    print(PROJECT_DIR)
     df = pd.read_csv(data_path, low_memory=False)
     
     valid = df[
