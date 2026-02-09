@@ -139,7 +139,7 @@ class DBProductionBatchRunner(ProductionBatchRunner):
                     "S.No": idx,
                     "Patient ID": row.get("patient_id", ""),
                     "Patient Name": row.get("patient_name", ""),
-                    "DOS": row.get("dos", ""),
+                    "DOS": row.get("date_of_service", ""),
                     "Reports": str(report_text)[:500] if report_text else "",
                     "batch_id": batch_id,
                     "record_idx": idx,
@@ -157,6 +157,7 @@ class DBProductionBatchRunner(ProductionBatchRunner):
                         error="Report empty or too short",
                     )
                     csv_row.update(self._error_csv_payload("Report empty or too short"))
+                    self._insert_result_record(connection, csv_row)
                     batch_results.append(csv_row)
                     error_count += 1
                     continue
@@ -190,6 +191,7 @@ class DBProductionBatchRunner(ProductionBatchRunner):
                         csv_row.update(self._success_csv_payload(result))
                         processed_count += 1
 
+                    self._insert_result_record(connection, csv_row)
                     batch_results.append(csv_row)
 
                 except Exception as exc:
@@ -205,6 +207,7 @@ class DBProductionBatchRunner(ProductionBatchRunner):
                         error=error_msg,
                     )
                     csv_row.update(self._error_csv_payload(error_msg))
+                    self._insert_result_record(connection, csv_row)
                     batch_results.append(csv_row)
                     error_count += 1
 
@@ -220,7 +223,7 @@ class DBProductionBatchRunner(ProductionBatchRunner):
         self._export_csv(batch_results, batch_id)
 
         logger.info(
-            f"Batch complete → processed={processed_count}, errors={error_count}"
+            f"Batch complete  processed={processed_count}, errors={error_count}"
         )
 
     # -----------------------------------------------------------------
@@ -235,7 +238,7 @@ class DBProductionBatchRunner(ProductionBatchRunner):
         csv_path = results_dir / f"batch_{batch_id}.csv"
         pd.DataFrame(batch_results).to_csv(csv_path, index=False)
 
-        logger.info(f"CSV exported → {csv_path}")
+        logger.info(f"CSV exported  {csv_path}")
 
     def _error_csv_payload(self, message: Optional[str]):
         return {
@@ -270,6 +273,90 @@ class DBProductionBatchRunner(ProductionBatchRunner):
             "Postprocess_Time_ms": result.get("postprocess_time_ms", 0),
             "status": "processed",
         }
+
+    def _insert_result_record(self, connection, record_data: dict):
+        """Insert a processed record into the results table."""
+        cursor = connection.cursor()
+        
+        # Helper to safely get value or None
+        def get_val(key, default=None):
+            val = record_data.get(key, default)
+            return val if val is not None else default
+
+        # Map csv/record_data keys to table columns
+        # Table columns:
+        # id (auto), patient_id, patient_name, date_of_service, report, cpt, modifier, icd10_diagnosis,
+        # confidence_score, rag_match_score, cpt_was_extracted, has_medical_necessity, medical_necessity_warning,
+        # llm_raw_response, preprocess_time_ms, llm_time_ms, postprocess_time_ms,
+        # batch_id, record_idx, processed_at, status, source_file, created_at, updated_at
+
+        # Parse date_of_service if possible, else None
+        dos_raw = get_val("DOS")
+        date_of_service = None
+        if dos_raw:
+            try:
+                # Try standard formats
+                for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%d-%m-%Y", "%Y/%m/%d"):
+                    try:
+                        date_of_service = datetime.strptime(str(dos_raw), fmt).strftime("%Y-%m-%d")
+                        break
+                    except ValueError:
+                        continue
+            except Exception:
+                pass # Leave as None if parsing fails
+
+        query = """
+            INSERT INTO imagine_records_results (
+                patient_id, patient_name, date_of_service, report,
+                cpt, modifier, icd10_diagnosis,
+                confidence_score, rag_match_score,
+                cpt_was_extracted, has_medical_necessity, medical_necessity_warning,
+                llm_raw_response,
+                preprocess_time_ms, llm_time_ms, postprocess_time_ms,
+                batch_id, record_idx, processed_at, status, source_file
+            ) VALUES (
+                %s, %s, %s, %s,
+                %s, %s, %s,
+                %s, %s,
+                %s, %s, %s,
+                %s,
+                %s, %s, %s,
+                %s, %s, %s, %s, %s
+            )
+        """
+        
+        values = (
+            get_val("Patient ID"),
+            get_val("Patient Name"),
+            date_of_service,
+            get_val("Reports"),
+            get_val("CPT"),
+            get_val("Modifier"),
+            get_val("ICD10_Diagnosis"),
+            get_val("Confidence_Score", 0),
+            get_val("RAG_Match_Score", 0),
+            1 if get_val("CPT_Was_Extracted") else 0,
+            1 if get_val("Has_Medical_Necessity") else 0,
+            get_val("Medical_Necessity_Warning"),
+            get_val("LLM_Raw_Response"),
+            get_val("Preprocess_Time_ms", 0),
+            get_val("LLM_Time_ms", 0),
+            get_val("Postprocess_Time_ms", 0),
+            get_val("batch_id"),
+            get_val("record_idx"),
+            get_val("processed_at"),
+            get_val("status"),
+            get_val("source_file"),
+        )
+        
+        try:
+            cursor.execute(query, values)
+            connection.commit()
+        except Error as e:
+            logger.error(f"Failed to insert result record: {e}")
+            # Don't raise, just log, so main loop continues
+        finally:
+            cursor.close()
 
     def _update_record(
         self,
